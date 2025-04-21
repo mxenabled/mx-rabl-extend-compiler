@@ -8,7 +8,7 @@ Gem::Specification.new do |spec|
   spec.name          = 'mx-rabl-extend-compiler'
   spec.version       = Rabl::Extend::Compiler::VERSION
   spec.authors       = ['Brandon Dewitt', 'MXDevExperience', 'Bryant Morrill']
-  spec.email         = ['brandonsdewitt@gmail.com', 'devexperience@mx.com']
+  spec.email         = ['devexperience@mx.com']
 
   spec.summary       = ' a set of rake tasks to compile rabl templates for performance '
   spec.description   = ' a set of rake tasks to compile and verify rabl templates that use `extend` for moooooaaar performance '
