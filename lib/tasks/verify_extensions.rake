@@ -1,28 +1,28 @@
-require "rabl"
-require "digest"
-require "stringio"
+# frozen_string_literal: true
+
+require 'rake'
+require 'rabl'
+require 'digest'
+require 'stringio'
 
 namespace :rabl do
   namespace :extend do
     namespace :compiler do
-      desc "verify that all extensions are created and the signatures match; return exit(1) if not verifiable"
+      desc 'verify that all extensions are created and the signatures match; return exit(1) if not verifiable'
       task :verify do
-        ::Rake.application["environment"].invoke if ::Rake::Task.task_defined?("environment")
+        ::Rake.application['environment'].invoke if ::Rake::Task.task_defined?('environment')
         view_paths = ::Rabl.configuration.view_paths
-        files_with_multiple_extensions = []
 
         view_paths.each do |view_path|
           ::Dir.glob("#{view_path}/**/*.rabl").each do |rabl_file|
             file_contents = ::File.read(rabl_file)
-            new_file_contents = ::StringIO.new
 
             ##
             # Run through each line and verify the Sha256 digest of the extension file contents
             # against the digest that is already stored in the file that extends
             #
             waiting = false
-            waiting_hash = ""
-            files_with_multiple_extensions << rabl_file if file_contents.scan(/#[[:space:]]*rabl-extend-compiler[[:space:]]*extends/).size > 1
+            waiting_hash = ''
 
             file_contents.each_line do |file_line|
               if waiting
@@ -30,37 +30,28 @@ namespace :rabl do
                 next
               end
 
-              if file_line.strip.gsub(/[[:space:]]+/, " ").start_with?("# rabl-extend-compiler extends")
-                extension_file = file_line.scan(/\A[[:space:]]*#[[:space:]]+rabl-extend-compiler[[:space:]]*extends[([:space:]]*['"]+([^"]*)['"]+/).flatten.first
-                extension_filename = "#{view_path}/#{extension_file}.rabl"
-                extension_file_digest = file_line.split("=>").last.gsub(/[[:space:]]/, "")
+              next unless file_line.strip.gsub(/[[:space:]]+/, ' ').start_with?('# rabl-extend-compiler extends')
 
-                next if extension_file_digest == ::Digest::SHA256.file(extension_filename).hexdigest
-                $stderr << "rabl-extend-compiler: Compiled extension digest mismatch #{extension_filename}"
-                $stderr << "rabl-extend-compiler: Run rake rabl:extend:compiler:all to reset"
+              extension_file = file_line.scan(/\A[[:space:]]*#[[:space:]]+rabl-extend-compiler[[:space:]]*extends[([:space:]]*['"]+([^"]*)['"]+/).flatten.first
+              extension_filename = "#{view_path}/#{extension_file}.rabl"
+              extension_file_digest = file_line.split('=>').last.gsub(/[[:space:]]/, '')
 
-                exit(1)
-              end
+              next if extension_file_digest == ::Digest::SHA256.file(extension_filename).hexdigest
+
+              $stderr << "rabl-extend-compiler: Compiled extension digest mismatch #{extension_filename}"
+              $stderr << 'rabl-extend-compiler: Run rake rabl:extend:compiler:all to reset'
+
+              exit(1)
             end
 
             file_contents.each_line do |file_line|
               extension_file = file_line.scan(/\A[[:space:]]*extends[([:space:]]*['"]+([^"]*)['"]+/).flatten
               next if extension_file.empty?
+
               $stderr << "rabl-extend-compiler: Uncompiled extenion at #{extension_file.first}"
 
               exit(1)
             end
-          end
-
-          files_with_multiple_extensions.each do |file_with_multiple_extensions|
-            $stderr.puts <<~MULTIPLE_EXTENSIONS
-              rable-extend-compiler has found a view file with more than 1 extension
-              this can introduce odd behavior and should be manually verified that this
-              is the expected behavior for your situation
-
-              File: #{file_with_multiple_extensions}
-
-            MULTIPLE_EXTENSIONS
           end
         end
       end

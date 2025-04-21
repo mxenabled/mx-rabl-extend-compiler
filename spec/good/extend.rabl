@@ -1,1 +1,0 @@
-attributes :id, :derp, :body

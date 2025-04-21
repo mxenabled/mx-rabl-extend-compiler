@@ -1,11 +1,17 @@
-require "bundler/gem_tasks"
-require "rake/testtask"
-require "rabl/extend/compiler"
+# frozen_string_literal: true
 
-Rake::TestTask.new(:spec) do |t|
-  t.libs << "spec"
-  t.libs << "lib"
-  t.test_files = FileList["spec/**/*_spec.rb"]
+require 'bundler/gem_tasks'
+require 'rspec/core/rake_task'
+require 'mx/rabl/extend/compiler'
+
+desc 'Run specs'
+RSpec::Core::RakeTask.new(:spec)
+
+desc 'Run RuboCop'
+task :rubocop do
+  RuboCop::RakeTask.new
 end
 
-task :default => :spec
+task default: %i[rubocop spec]
+
+Dir['lib/tasks/**/*.rake'].each { |ext| load ext } if defined?(Rake)

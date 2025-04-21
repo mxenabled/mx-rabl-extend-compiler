@@ -1,48 +1,115 @@
-require "fileutils"
-require "spec_helper"
+# frozen_string_literal: true
+
+require 'fileutils'
+require 'spec_helper'
 require 'pry'
 
-describe ::Rabl::Extend::Compiler do
-  describe "good" do
-    before do
-      good_path = ::File.join(::File.dirname(__FILE__), "..", "..", "good")
-      ::FileUtils.cp(::File.join(good_path, "app.rabl.good"), ::File.join(good_path, "app.rabl"))
-      ::FileUtils.cp(::File.join(good_path, "extend.rabl.good"), ::File.join(good_path, "extend.rabl"))
+describe ::Mx::Rabl::Extend::Compiler do
+  uncompiled_path = ::File.join(::File.dirname(__FILE__), '..', '..', 'uncompiled')
+  compiled_path = ::File.join(::File.dirname(__FILE__), '..', '..', 'compiled')
+  correct_path = ::File.join(::File.dirname(__FILE__), '..', '..', 'correct')
 
-      ::Rabl.configure do |config|
-        config.view_paths = [good_path]
-      end
+  ::Rabl.configure do |config|
+    config.view_paths = [::File.join(::File.dirname(__FILE__), '..', '..', 'compiled')]
+  end
+
+  describe 'all' do
+    before :all do
+      ::FileUtils.cp(::File.join(uncompiled_path, 'app.rabl'), ::File.join(compiled_path, 'app.rabl'))
+      ::FileUtils.cp(::File.join(uncompiled_path, 'app_already_compiled.rabl'),
+                     ::File.join(compiled_path, 'app_already_compiled.rabl'))
+      ::FileUtils.cp(::File.join(uncompiled_path, 'app_multiple.rabl'), ::File.join(compiled_path, 'app_multiple.rabl'))
+      ::FileUtils.cp(::File.join(uncompiled_path, 'extend.rabl'), ::File.join(compiled_path, 'extend.rabl'))
+      ::FileUtils.cp(::File.join(correct_path, 'app.rabl'), ::File.join(compiled_path, 'app_correct.rabl'))
+
+      ::Rake::Task['rabl:extend:compiler:all'].invoke
     end
 
-    it "verifies the files in the path" do
-      assert proc { ::Rake::Task["rabl:extend:compiler:verify"].invoke }
+    after :all do
+      FileUtils.remove_file(::File.join(compiled_path, 'app.rabl'), true)
+      FileUtils.remove_file(::File.join(compiled_path, 'app_already_compiled.rabl'), true)
+      FileUtils.remove_file(::File.join(compiled_path, 'app_multiple.rabl'), true)
+      FileUtils.remove_file(::File.join(compiled_path, 'extend.rabl'), true)
+      FileUtils.remove_file(::File.join(compiled_path, 'app_correct.rabl'), true)
     end
 
-    it "does not edit the files at all" do
-      good_path = ::File.join(::File.dirname(__FILE__), "..", "..", "good")
-      proc { ::Rake::Task["rabl:extend:compiler:all"].invoke }
+    it 'compiles correctly' do
+      compiled_contents = ::File.read(::File.join(compiled_path, 'app.rabl'))
+      correct_contents = ::File.read(::File.join(correct_path, 'app.rabl'))
 
-      good_contents = ::File.read(::File.join(good_path, "app.rabl.good"))
-      current_contents = ::File.read(::File.join(good_path, "app.rabl"))
+      expect(compiled_contents).to eq(correct_contents)
+    end
 
-      good_contents.must_equal current_contents
+    it 'compiles multiple extends correctly' do
+      compiled_contents = ::File.read(::File.join(compiled_path, 'app_multiple.rabl'))
+      correct_contents = ::File.read(::File.join(correct_path, 'app_multiple.rabl'))
+
+      expect(compiled_contents).to eq(correct_contents)
+    end
+
+    it 'recompiles correctly when changed' do
+      compiled_contents = ::File.read(::File.join(compiled_path, 'app_already_compiled.rabl'))
+      correct_contents = ::File.read(::File.join(correct_path, 'app_already_compiled.rabl'))
+
+      expect(compiled_contents).to eq(correct_contents)
+    end
+
+    it 'recompiles correctly when not changed' do
+      compiled_contents = ::File.read(::File.join(compiled_path, 'app_correct.rabl'))
+      correct_contents = ::File.read(::File.join(correct_path, 'app.rabl'))
+
+      expect(compiled_contents).to eq(correct_contents)
     end
   end
 
-  describe "bad" do
-    before do
-      bad_path = ::File.join(::File.dirname(__FILE__), "..", "..", "bad")
-      ::FileUtils.cp(::File.join(bad_path, "app.rabl.good"), ::File.join(bad_path, "app.rabl"))
-      ::FileUtils.cp(::File.join(bad_path, "app2.rabl.good"), ::File.join(bad_path, "app2.rabl"))
-      ::FileUtils.cp(::File.join(bad_path, "extend.rabl.good"), ::File.join(bad_path, "extend.rabl"))
+  describe 'verify' do
+    context 'when correct' do
+      before :all do
+        ::FileUtils.cp(::File.join(uncompiled_path, 'extend.rabl'), ::File.join(compiled_path, 'extend.rabl'))
+        ::FileUtils.cp(::File.join(correct_path, 'app.rabl'), ::File.join(compiled_path, 'app_correct.rabl'))
+      end
 
-      ::Rabl.configure do |config|
-        config.view_paths = [bad_path]
+      after :all do
+        FileUtils.remove_file(::File.join(compiled_path, 'extend.rabl'), true)
+        FileUtils.remove_file(::File.join(compiled_path, 'app_correct.rabl'), true)
+      end
+
+      it 'verifies the files in the path' do
+        task = ::Rake::Task['rabl:extend:compiler:verify']
+
+        exited = false
+
+        begin
+          task.invoke
+        rescue SystemExit
+          exited = true
+        end
+
+        expect(exited).to be(false)
       end
     end
 
-    it "verifies the files in the path" do
-      proc { ::Rake::Task["rabl:extend:compiler:verify"].invoke }.must_raise SystemExit
+    context 'when incorrect' do
+      before :all do
+        ::FileUtils.cp(::File.join(uncompiled_path, 'extend.rabl'), ::File.join(compiled_path, 'extend.rabl'))
+        ::FileUtils.cp(::File.join(uncompiled_path, 'app_already_compiled.rabl'),
+                       ::File.join(compiled_path, 'app_already_compiled.rabl'))
+      end
+
+      after :all do
+        FileUtils.remove_file(::File.join(compiled_path, 'extend.rabl'), true)
+        FileUtils.remove_file(::File.join(compiled_path, 'app_already_compiled.rabl'), true)
+      end
+
+      it 'verifies the files in the path and raises error' do
+        task = ::Rake::Task['rabl:extend:compiler:verify']
+
+        begin
+          task.invoke
+        rescue SystemExit => e
+          expect(e.status).to eq(1)
+        end
+      end
     end
   end
 end
