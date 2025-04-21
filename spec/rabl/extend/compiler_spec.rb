@@ -2,7 +2,6 @@
 
 require 'fileutils'
 require 'spec_helper'
-require 'pry'
 
 describe ::Mx::Rabl::Extend::Compiler do
   uncompiled_path = ::File.join(::File.dirname(__FILE__), '..', '..', 'uncompiled')
