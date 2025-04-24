@@ -2,13 +2,13 @@
 
 lib = File.expand_path('lib', __dir__)
 $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
-require 'rabl/extend/compiler/version'
+require 'mx/rabl/extend/compiler/version'
 
 Gem::Specification.new do |spec|
   spec.name          = 'mx-rabl-extend-compiler'
-  spec.version       = Rabl::Extend::Compiler::VERSION
+  spec.version       = ::Mx::Rabl::Extend::Compiler::VERSION
   spec.authors       = ['Brandon Dewitt', 'MXDevExperience', 'Bryant Morrill']
-  spec.email         = ['devexperience@mx.com']
+  spec.email         = ['devexperience@mx.com', 'bryantreadmorrill@gmail.com']
 
   spec.summary       = ' a set of rake tasks to compile rabl templates for performance '
   spec.description   = ' a set of rake tasks to compile and verify rabl templates that use `extend` for moooooaaar performance '
