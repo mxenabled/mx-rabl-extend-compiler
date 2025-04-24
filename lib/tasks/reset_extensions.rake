@@ -1,13 +1,16 @@
-require "rabl"
-require "digest"
-require "stringio"
+# frozen_string_literal: true
+
+require 'rake'
+require 'rabl'
+require 'digest'
+require 'stringio'
 
 namespace :rabl do
   namespace :extend do
     namespace :compiler do
-      desc "reset extensions to be compiled"
+      desc 'reset extensions to be compiled'
       task :reset do
-        ::Rake.application["environment"].invoke if ::Rake::Task.task_defined?("environment")
+        ::Rake.application['environment'].invoke if ::Rake::Task.task_defined?('environment')
         view_paths = ::Rabl.configuration.view_paths
 
         view_paths.each do |view_path|
@@ -20,22 +23,24 @@ namespace :rabl do
             # against the digest that is already stored in the file that extends
             #
             waiting = false
-            waiting_hash = ""
+            waiting_hash = ''
             file_contents.each_line do |file_line|
               if waiting
                 waiting = !file_line.include?(waiting_hash) # if we are in a waiting state then we throw the line away
                 next
               end
 
-              if file_line.strip.gsub(/[[:space:]]+/, " ").start_with?("# rabl-extend-compiler extends")
+              if file_line.strip.gsub(/[[:space:]]+/, ' ').start_with?('# rabl-extend-compiler extends')
                 extension_file = file_line.scan(/\A[[:space:]]*#[[:space:]]+rabl-extend-compiler[[:space:]]*extends[([:space:]]*['"]+([^"]*)['"]+/).flatten.first
-                  extension_filename = "#{view_path}/#{extension_file}.rabl"
-                extension_file_digest = file_line.split("=>").last.gsub(/[[:space:]]/, "")
+                extension_filename = "#{view_path}/#{extension_file}.rabl"
+                extension_file_digest = file_line.split('=>')[1]&.gsub(/[[:space:]]/, '')
 
                 if extension_file_digest == ::Digest::SHA256.file(extension_filename).hexdigest
                   new_file_contents.puts file_line
+                elsif extension_file_digest.nil?
+                  new_file_contents.puts file_line.split('=>').first.gsub('# rabl-extend-compiler ', '')
                 else
-                  new_file_contents.puts file_line.split("=>").first.gsub("# rabl-extend-compiler ", "")
+                  new_file_contents.puts file_line.split('=>').first.gsub('# rabl-extend-compiler ', '')
                   waiting = true
                   waiting_hash = extension_file_digest
                 end
@@ -45,9 +50,7 @@ namespace :rabl do
             end
 
             # Replace the file if the contents changed and the following will rewrite it again
-            if file_contents != new_file_contents.string
-              ::File.write(rabl_file, new_file_contents.string)
-            end
+            ::File.write(rabl_file, new_file_contents.string) if file_contents != new_file_contents.string
           end
         end
       end
