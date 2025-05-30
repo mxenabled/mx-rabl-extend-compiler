@@ -4,7 +4,7 @@ module Mx
   module Rabl
     module Extend
       module Compiler
-        VERSION = '0.2.0'
+        VERSION = '0.2.1'
       end
     end
   end
